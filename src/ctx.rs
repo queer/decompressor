@@ -35,11 +35,7 @@ fn detect_compression_type(buffer: &[u8], flags: &Flags) -> CompressionType {
         CompressionType::Zlib
     } else if buffer.starts_with(&[0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]) {
         CompressionType::Xz
-    }
-    /*else if buffer.starts_with(&[0x5d, 0x00]) {
-        CompressionType::Lzma
-    } */
-    else if "brotli" == flags.hint {
+    } else if "brotli" == flags.hint {
         CompressionType::Brotli
     } else {
         CompressionType::None
@@ -50,8 +46,8 @@ pub struct Context<'a, R: Read, W: Write> {
     input_compression_type: CompressionType,
     output_compression_type: CompressionType,
 
-    input_stream: Box<&'a mut R>,
-    output_stream: Box<&'a mut W>,
+    input_stream: &'a mut R,
+    output_stream: &'a mut W,
 }
 
 impl<'a, R: Read, W: Write> Context<'a, R, W> {
@@ -64,58 +60,52 @@ impl<'a, R: Read, W: Write> Context<'a, R, W> {
         Ok(Self {
             input_compression_type,
             output_compression_type: flags.output_type.unwrap_or(CompressionType::None),
-            input_stream: Box::new(input_stream),
-            output_stream: Box::new(output_stream),
+            input_stream,
+            output_stream,
         })
     }
 
     pub fn translate_stream(&mut self) -> Result<()> {
-        let input_stream = self.input_stream.as_mut();
-        let output_stream = self.output_stream.as_mut();
-
         let mut decompressor: Box<dyn Decompressor> = match self.input_compression_type {
             CompressionType::Zstd => {
-                let decoder = zstd::Decoder::new(input_stream)?;
+                let decoder = zstd::Decoder::new(&mut self.input_stream)?;
                 Box::new(ZstdDecompressor(decoder))
             }
             CompressionType::Brotli => {
-                let decoder = brotli::Decompressor::new(input_stream, 4096);
+                let decoder = brotli::Decompressor::new(&mut self.input_stream, 4096);
                 Box::new(BrotliDecompressor(decoder))
             }
             CompressionType::Gzip => {
-                let decoder = flate2::read::GzDecoder::new(input_stream);
+                let decoder = flate2::read::GzDecoder::new(&mut self.input_stream);
                 Box::new(GzipDecompressor(decoder))
             }
             CompressionType::Deflate => {
-                let decoder = flate2::read::DeflateDecoder::new(input_stream);
+                let decoder = flate2::read::DeflateDecoder::new(&mut self.input_stream);
                 Box::new(DeflateDecompressor(decoder))
             }
             CompressionType::Zlib => {
-                let decoder = flate2::read::ZlibDecoder::new(input_stream);
+                let decoder = flate2::read::ZlibDecoder::new(&mut self.input_stream);
                 Box::new(ZlibDecompressor(decoder))
             }
-            // CompressionType::Lzma => {
-            //     let decoder = lzma_rs::lzma_decompressor::LzmaDecompressor::new(stream);
-            //     LzmaDecompressor(decoder)
-            // }
             CompressionType::Xz => {
-                let decoder = xz2::read::XzDecoder::new(input_stream);
+                let decoder = xz2::read::XzDecoder::new(&mut self.input_stream);
                 Box::new(XzDecompressor(decoder))
             }
             CompressionType::None => {
-                let decoder = input_stream;
+                let decoder = &mut self.input_stream;
                 Box::new(NoneDecompressor(decoder))
             }
         };
 
         let mut compressor: Box<dyn Compressor> = match self.output_compression_type {
             CompressionType::Zstd => {
-                let encoder = zstd::Encoder::new(output_stream, ZSTD_LEVEL)?.auto_finish();
+                let encoder =
+                    zstd::Encoder::new(&mut self.output_stream, ZSTD_LEVEL)?.auto_finish();
                 Box::new(ZstdCompressor(encoder))
             }
             CompressionType::Brotli => {
                 let encoder = brotli::CompressorWriter::new(
-                    output_stream,
+                    &mut self.output_stream,
                     BROTLI_BUFFER_SIZE,
                     BROTLI_Q,
                     BROTLI_LGWIN,
@@ -123,32 +113,32 @@ impl<'a, R: Read, W: Write> Context<'a, R, W> {
                 Box::new(BrotliCompressor(encoder))
             }
             CompressionType::Gzip => {
-                let encoder =
-                    flate2::write::GzEncoder::new(output_stream, flate2::Compression::default());
+                let encoder = flate2::write::GzEncoder::new(
+                    &mut self.output_stream,
+                    flate2::Compression::default(),
+                );
                 Box::new(GzipCompressor(encoder))
             }
             CompressionType::Deflate => {
                 let encoder = flate2::write::DeflateEncoder::new(
-                    output_stream,
+                    &mut self.output_stream,
                     flate2::Compression::default(),
                 );
                 Box::new(DeflateCompressor(encoder))
             }
             CompressionType::Zlib => {
-                let encoder =
-                    flate2::write::ZlibEncoder::new(output_stream, flate2::Compression::default());
+                let encoder = flate2::write::ZlibEncoder::new(
+                    &mut self.output_stream,
+                    flate2::Compression::default(),
+                );
                 Box::new(ZlibCompressor(encoder))
             }
-            // CompressionType::Lzma => {
-            //     let encoder = lzma_rs::lzma_compress::LzmaCompressor::new(output_stream, 6);
-            //     LzmaCompressor(encoder)
-            // }
             CompressionType::Xz => {
-                let encoder = xz2::write::XzEncoder::new(output_stream, XZ_LEVEL);
+                let encoder = xz2::write::XzEncoder::new(&mut self.output_stream, XZ_LEVEL);
                 Box::new(XzCompressor(encoder))
             }
             CompressionType::None => {
-                let encoder = output_stream;
+                let encoder = &mut self.output_stream;
                 Box::new(NoneCompressor(encoder))
             }
         };
