@@ -1,0 +1,14 @@
+[package]
+name = "c"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+brotli = "3.3.4"
+color-eyre = { version = "0.6.2", features = ["issue-url"] }
+flate2 = "1.0.25"
+lzma-rs = { version = "0.3.0", features = ["stream"] }
+xz2 = "0.1.7"
+zstd = "0.12.2"
