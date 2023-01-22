@@ -161,14 +161,14 @@ impl<'a, R: Read, W: Write> Context<'a, R, W> {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, clap::ValueEnum, strum::Display)]
 pub enum CompressionType {
-    Zstd,
-    Brotli,
-    Gzip,
-    Deflate,
-    Zlib,
-    // Lzma,
-    Xz,
     None,
+    Brotli,
+    Deflate,
+    Gzip,
+    Xz,
+    Zlib,
+    Zstd,
+    // Lzma,
 }
 
 // Compression //
