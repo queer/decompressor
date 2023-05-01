@@ -10,7 +10,7 @@ atty = "0.2.14"
 brotli = "3.3.4"
 clap = { version = "4.2.5", features = ["derive"] }
 color-eyre = { version = "0.6.2", features = ["issue-url"] }
-flate2 = "1.0.25"
+flate2 = "1.0.26"
 lzma-rs = { version = "0.3.0", features = ["stream"] }
 strum = { version = "0.24.1", features = ["derive"] }
 xz2 = "0.1.7"
