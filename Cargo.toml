@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 atty = "0.2.14"
 brotli = "3.3.4"
-clap = { version = "4.3.23", features = ["derive"] }
+clap = { version = "4.3.24", features = ["derive"] }
 color-eyre = { version = "0.6.2", features = ["issue-url"] }
 flate2 = "1.0.27"
 lzma-rs = { version = "0.3.0", features = ["stream"] }
